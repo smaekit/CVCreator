@@ -6,6 +6,7 @@ import {
   getAssignments, getSkills, getEducations, getCertifications, getLanguages,
 } from '../profile/collectionsApi'
 import { CVPreview } from '../cv-preview/CVPreview'
+import { FrontPageGroupsEditor } from './FrontPageGroupsEditor'
 
 interface SelAssignment { id: string; isHighlighted: boolean }
 
@@ -218,6 +219,14 @@ export default function CvBuilderPage() {
               </div>
             ))}
           </section>
+
+          {id && (
+            <FrontPageGroupsEditor
+              cvId={id}
+              allSkills={allSkills}
+              allCertifications={allCertifications}
+            />
+          )}
         </aside>
 
         {/* Right panel — live preview */}

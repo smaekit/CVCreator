@@ -5,9 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import CvBuilderPage from './CvBuilderPage'
 import * as builderApi from './cvBuilderApi'
 import * as collectionsApi from '../profile/collectionsApi'
+import * as frontPageGroupsApi from './frontPageGroupsApi'
 
 vi.mock('./cvBuilderApi')
 vi.mock('../profile/collectionsApi')
+vi.mock('./frontPageGroupsApi')
 
 const emptyCv = {
   firstName: 'Jane', lastName: 'Doe', pictureUrl: null,
@@ -40,6 +42,7 @@ describe('CvBuilderPage', () => {
     vi.mocked(collectionsApi.getEducations).mockResolvedValue([])
     vi.mocked(collectionsApi.getCertifications).mockResolvedValue([])
     vi.mocked(collectionsApi.getLanguages).mockResolvedValue([])
+    vi.mocked(frontPageGroupsApi.getFrontPageGroups).mockResolvedValue([])
   })
 
   it('renders the CV name in the header', async () => {

@@ -43,6 +43,18 @@ export function CVPreview({ cv }: Props) {
         </section>
       )}
 
+      {/* Front page groups */}
+      {(cv.frontPageGroups ?? []).map(group => (
+        <section key={group.id}>
+          <h2 className="text-lg font-semibold border-b pb-1 mb-3">{group.header}</h2>
+          <ul className="flex flex-wrap gap-2">
+            {group.items.map(item => (
+              <li key={item.id} className="bg-gray-100 rounded px-2 py-0.5 text-sm">{item.label}</li>
+            ))}
+          </ul>
+        </section>
+      ))}
+
       {/* Regular assignments */}
       {regular.length > 0 && (
         <section>

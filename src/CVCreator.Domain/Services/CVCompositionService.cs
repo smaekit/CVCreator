@@ -12,7 +12,8 @@ public static class CVCompositionService
         List<(CVSkill CVSkill, Skill Skill)> selectedSkills,
         List<(CVEducation CVEducation, Education Education)> selectedEducations,
         List<(CVCertification CVCertification, Certification Certification)> selectedCertifications,
-        List<(CVLanguage CVLanguage, Language Language)> selectedLanguages)
+        List<(CVLanguage CVLanguage, Language Language)> selectedLanguages,
+        List<ResolvedFrontPageGroup>? frontPageGroups = null)
     {
         var lang = cv.Language;
         var r = BilingualTextResolver.Resolve;
@@ -89,6 +90,9 @@ public static class CVCompositionService
             hasIntroOverride,
             assignments, skills, educations, certs, langs,
             lang,
-            cv.YearsOfExperience);
+            cv.YearsOfExperience)
+        {
+            FrontPageGroups = frontPageGroups ?? []
+        };
     }
 }

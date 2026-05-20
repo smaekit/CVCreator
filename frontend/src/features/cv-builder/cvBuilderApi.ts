@@ -22,6 +22,13 @@ export interface ResolvedCertification {
 
 export interface ResolvedLanguage { id: string; name: string; proficiency: string; displayOrder: number }
 
+export interface ResolvedFrontPageGroupItem { id: string; label: string; displayOrder: number }
+
+export interface ResolvedFrontPageGroup {
+  id: string; header: string; headerFallbackUsed: boolean; displayOrder: number
+  items: ResolvedFrontPageGroupItem[]
+}
+
 export interface ResolvedCv {
   firstName: string; lastName: string; pictureUrl: string | null
   introduction: ResolvedText; isIntroductionOverridden: boolean
@@ -31,6 +38,7 @@ export interface ResolvedCv {
   certifications: ResolvedCertification[]
   languages: ResolvedLanguage[]
   language: string; yearsOfExperience: string | null
+  frontPageGroups?: ResolvedFrontPageGroup[]
 }
 
 export interface SelectionItem { id: string; displayOrder: number; isHighlighted?: boolean }

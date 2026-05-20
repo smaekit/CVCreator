@@ -1,5 +1,6 @@
 using CVCreator.Domain.Entities;
 using CVCreator.Domain.Services;
+using CVCreator.Domain.ViewModels;
 using FluentAssertions;
 
 namespace CVCreator.Domain.Tests;
@@ -132,5 +133,33 @@ public class CVCompositionServiceTests
 
         result.Assignments.Should().BeEmpty();
         result.Skills.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Compose_FrontPageGroups_IncludedInResult()
+    {
+        var profile = MakeProfile();
+        var cv = MakeCv("EN");
+        var groups = new List<ResolvedFrontPageGroup>
+        {
+            new(Guid.NewGuid(), "Cloud Skills", false, 0,
+                [new(Guid.NewGuid(), "Azure", 0)])
+        };
+
+        var result = CVCompositionService.Compose(profile, cv, [], [], [], [], [], groups);
+
+        result.FrontPageGroups.Should().ContainSingle(g => g.Header == "Cloud Skills");
+        result.FrontPageGroups[0].Items.Should().ContainSingle(i => i.Label == "Azure");
+    }
+
+    [Fact]
+    public void Compose_NoFrontPageGroups_ReturnsEmpty()
+    {
+        var profile = MakeProfile();
+        var cv = MakeCv("EN");
+
+        var result = CVCompositionService.Compose(profile, cv, [], [], [], [], []);
+
+        result.FrontPageGroups.Should().BeEmpty();
     }
 }

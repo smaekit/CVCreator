@@ -85,4 +85,28 @@ describe('CVPreview', () => {
     render(<CVPreview cv={cv} />)
     expect(screen.getByText('Swedish — Native')).toBeInTheDocument()
   })
+
+  it('renders front page groups below highlighted assignments', () => {
+    const cv: ResolvedCv = {
+      ...baseCv,
+      frontPageGroups: [
+        {
+          id: 'g1', header: 'Cloud Skills', headerFallbackUsed: false, displayOrder: 0,
+          items: [
+            { id: 'i1', label: 'Azure', displayOrder: 0 },
+            { id: 'i2', label: 'Kubernetes', displayOrder: 1 },
+          ],
+        },
+      ],
+    }
+    render(<CVPreview cv={cv} />)
+    expect(screen.getByText('Cloud Skills')).toBeInTheDocument()
+    expect(screen.getByText('Azure')).toBeInTheDocument()
+    expect(screen.getByText('Kubernetes')).toBeInTheDocument()
+  })
+
+  it('renders no front page groups section when none present', () => {
+    render(<CVPreview cv={baseCv} />)
+    expect(screen.queryByRole('list')).not.toBeInTheDocument()
+  })
 })

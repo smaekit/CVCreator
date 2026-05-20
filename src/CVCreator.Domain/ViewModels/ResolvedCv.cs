@@ -13,7 +13,20 @@ public record ResolvedCv(
     List<ResolvedLanguage> Languages,
     string Language,
     string? YearsOfExperience
+)
+{
+    public List<ResolvedFrontPageGroup> FrontPageGroups { get; init; } = [];
+}
+
+public record ResolvedFrontPageGroup(
+    Guid Id,
+    string Header,
+    bool HeaderFallbackUsed,
+    int DisplayOrder,
+    List<ResolvedFrontPageGroupItem> Items
 );
+
+public record ResolvedFrontPageGroupItem(Guid Id, string Label, int DisplayOrder);
 
 public record ResolvedText(string Text, bool FallbackUsed);
 
