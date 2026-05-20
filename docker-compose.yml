@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cvcreator
+      POSTGRES_PASSWORD: cvcreator
+      POSTGRES_DB: cvcreator
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    ports:
+      - "10000:10000"
+    volumes:
+      - azurite_data:/data
+    command: azurite-blob --blobHost 0.0.0.0 --blobPort 10000
+
+  api:
+    build:
+      context: .
+      dockerfile: src/CVCreator.API/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5000
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=cvcreator;Username=cvcreator;Password=cvcreator"
+      AzureStorage__ConnectionString: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OGLjX+N6+Lp87cs6quJSnAh2VozLjRJoLJlBNQ==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+      - azurite
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  azurite_data:

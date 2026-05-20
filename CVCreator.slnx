@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CVCreator.API/CVCreator.API.csproj" />
+    <Project Path="src/CVCreator.Application/CVCreator.Application.csproj" />
+    <Project Path="src/CVCreator.Domain/CVCreator.Domain.csproj" />
+    <Project Path="src/CVCreator.Infrastructure/CVCreator.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CVCreator.Domain.Tests/CVCreator.Domain.Tests.csproj" />
+    <Project Path="tests/CVCreator.Integration.Tests/CVCreator.Integration.Tests.csproj" />
+  </Folder>
+</Solution>
