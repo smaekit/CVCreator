@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cvcreator-frontend
+  namespace: cvcreator
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cvcreator-frontend
+  template:
+    metadata:
+      labels:
+        app: cvcreator-frontend
+    spec:
+      containers:
+        - name: cvcreator-frontend
+          image: cvcreator/frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cvcreator-frontend
+  namespace: cvcreator
+spec:
+  selector:
+    app: cvcreator-frontend
+  ports:
+    - port: 80
+      targetPort: 80

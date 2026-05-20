@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cvcreator-api
+  namespace: cvcreator
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cvcreator-api
+  template:
+    metadata:
+      labels:
+        app: cvcreator-api
+    spec:
+      containers:
+        - name: cvcreator-api
+          image: cvcreator/api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: ASPNETCORE_URLS
+              value: http://+:8080
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: cvcreator-secrets
+                  key: postgres-password
+            - name: Jwt__Secret
+              valueFrom:
+                secretKeyRef:
+                  name: cvcreator-secrets
+                  key: jwt-secret
+            - name: Jwt__Issuer
+              value: CVCreator
+            - name: Jwt__Audience
+              value: CVCreator
+            - name: Jwt__ExpirationMinutes
+              value: "60"
+            - name: OpenAI__ApiKey
+              valueFrom:
+                secretKeyRef:
+                  name: cvcreator-secrets
+                  key: openai-api-key
+            - name: AzureStorage__ConnectionString
+              valueFrom:
+                secretKeyRef:
+                  name: cvcreator-secrets
+                  key: azure-storage-connection-string
+            - name: POSTGRES_HOST
+              value: postgres.cvcreator.svc.cluster.local
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cvcreator-api
+  namespace: cvcreator
+spec:
+  selector:
+    app: cvcreator-api
+  ports:
+    - port: 80
+      targetPort: 8080
