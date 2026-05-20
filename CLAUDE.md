@@ -42,7 +42,7 @@ dotnet test tests/CVCreator.Domain.Tests
 dotnet test tests/CVCreator.Integration.Tests
 
 # Frontend tests
-cd frontend && bun test
+cd frontend && bun run test
 
 # All .NET tests
 dotnet test

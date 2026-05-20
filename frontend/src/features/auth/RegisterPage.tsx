@@ -1,17 +1,23 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { register } from './authApi'
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.')
+      return
+    }
     try {
       await register(email, password)
-      window.location.href = '/login'
+      navigate('/login')
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { errors?: string[] } } })
         ?.response?.data?.errors?.[0]

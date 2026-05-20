@@ -2,7 +2,25 @@
   "permissions": {
     "allow": [
       "mcp__context7__query-docs",
-      "mcp__context7__resolve-library-id"
+      "mcp__context7__resolve-library-id",
+      "Bash(dotnet --version)",
+      "Bash(bun --version)",
+      "Bash(docker --version)",
+      "Bash(dotnet new *)",
+      "Bash(mkdir src *)",
+      "Bash(mkdir tests *)",
+      "Bash(dotnet sln *)",
+      "Bash(dotnet add *)",
+      "Bash(bun create *)",
+      "Bash(bun add *)",
+      "Bash(dotnet build *)",
+      "Bash(dotnet test *)",
+      "Bash(bun run *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(gh issue *)",
+      "Bash(gh repo *)",
+      "Bash(bun test *)"
     ]
   }
 }

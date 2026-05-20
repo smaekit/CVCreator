@@ -1,65 +1,78 @@
-import { useEffect, useState } from 'react'
-import { api } from '../../lib/api'
+import { useState, useEffect } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { BilingualFieldPair } from './BilingualFieldPair'
-
-interface Profile {
-  firstName: string
-  lastName: string
-  pictureUrl: string | null
-  introductionSv: string | null
-  introductionEn: string | null
-}
+import { getProfile, upsertProfile, uploadPicture } from './profileApi'
+import { SkillsSection } from './SkillsSection'
+import { EducationSection } from './EducationSection'
+import { CertificationsSection } from './CertificationsSection'
+import { LanguagesSection } from './LanguagesSection'
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<Profile | null>(null)
+  const queryClient = useQueryClient()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [introSv, setIntroSv] = useState('')
   const [introEn, setIntroEn] = useState('')
-  const [saving, setSaving] = useState(false)
   const [pictureFile, setPictureFile] = useState<File | null>(null)
+  const [picturePreview, setPicturePreview] = useState<string | null>(null)
+  const [initialized, setInitialized] = useState(false)
+
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ['profile'],
+    queryFn: getProfile,
+  })
 
   useEffect(() => {
-    api.get<Profile>('/profile').then((res) => {
-      const p = res.data
-      setProfile(p)
-      setFirstName(p.firstName)
-      setLastName(p.lastName)
-      setIntroSv(p.introductionSv ?? '')
-      setIntroEn(p.introductionEn ?? '')
-    }).catch(() => {})
-  }, [])
+    if (profile && !initialized) {
+      setFirstName(profile.firstName)
+      setLastName(profile.lastName)
+      setIntroSv(profile.introductionSv ?? '')
+      setIntroEn(profile.introductionEn ?? '')
+      setInitialized(true)
+    }
+  }, [profile, initialized])
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault()
-    setSaving(true)
-    try {
-      await api.put('/profile', {
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      await upsertProfile({
         firstName,
         lastName,
         introductionSv: introSv || null,
         introductionEn: introEn || null,
       })
       if (pictureFile) {
-        const form = new FormData()
-        form.append('file', pictureFile)
-        const res = await api.post<{ url: string }>('/profile/picture', form)
-        setProfile((p) => p ? { ...p, pictureUrl: res.data.url } : p)
+        await uploadPicture(pictureFile)
         setPictureFile(null)
+        setPicturePreview(null)
       }
-    } finally {
-      setSaving(false)
-    }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
+    },
+  })
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    setPictureFile(file)
+    setPicturePreview(file ? URL.createObjectURL(file) : null)
   }
+
+  if (isLoading) return <div className="p-8 text-center">Loading...</div>
+
+  const displayPicture = picturePreview ?? profile?.pictureUrl ?? null
 
   return (
     <div className="max-w-xl mx-auto p-6 flex flex-col gap-4">
       <h1 className="text-2xl font-bold">Profile</h1>
-      <form onSubmit={handleSave} className="flex flex-col gap-4">
+      <form
+        onSubmit={(e) => { e.preventDefault(); saveMutation.mutate() }}
+        className="flex flex-col gap-4"
+      >
         <div className="flex gap-3">
           <div className="flex flex-col flex-1 gap-1">
-            <label className="text-sm font-medium">First name</label>
+            <label htmlFor="firstName" className="text-sm font-medium">First name</label>
             <input
+              id="firstName"
               className="border rounded p-2"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
@@ -67,8 +80,9 @@ export default function ProfilePage() {
             />
           </div>
           <div className="flex flex-col flex-1 gap-1">
-            <label className="text-sm font-medium">Last name</label>
+            <label htmlFor="lastName" className="text-sm font-medium">Last name</label>
             <input
+              id="lastName"
               className="border rounded p-2"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
@@ -85,21 +99,37 @@ export default function ProfilePage() {
         />
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium">Profile picture</label>
-          {profile?.pictureUrl && (
-            <img src={profile.pictureUrl} alt="Profile" className="w-24 h-24 rounded-full object-cover mb-2" />
+          <label htmlFor="picture" className="text-sm font-medium">Profile picture</label>
+          {displayPicture && (
+            <img
+              src={displayPicture}
+              alt="Profile"
+              className="w-24 h-24 rounded-full object-cover mb-2"
+            />
           )}
-          <input type="file" accept="image/*" onChange={(e) => setPictureFile(e.target.files?.[0] ?? null)} />
+          <input id="picture" type="file" accept="image/*" onChange={handleFileChange} />
         </div>
+
+        {saveMutation.isError && (
+          <p className="text-red-600 text-sm">Failed to save profile. Please try again.</p>
+        )}
 
         <button
           type="submit"
-          disabled={saving}
+          disabled={saveMutation.isPending}
           className="bg-blue-600 text-white rounded px-4 py-2 disabled:opacity-50"
         >
-          {saving ? 'Saving…' : 'Save'}
+          {saveMutation.isPending ? 'Saving…' : 'Save'}
         </button>
       </form>
+        <hr />
+        <SkillsSection />
+        <hr />
+        <EducationSection />
+        <hr />
+        <CertificationsSection />
+        <hr />
+        <LanguagesSection />
     </div>
   )
 }

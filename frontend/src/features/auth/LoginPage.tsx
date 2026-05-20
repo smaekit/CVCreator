@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { login } from './authApi'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -12,7 +14,7 @@ export default function LoginPage() {
     try {
       const token = await login(email, password)
       localStorage.setItem('token', token)
-      window.location.href = '/'
+      navigate('/')
     } catch {
       setError('Invalid email or password.')
     }
