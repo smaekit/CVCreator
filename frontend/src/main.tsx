@@ -7,6 +7,7 @@ import LoginPage from './features/auth/LoginPage'
 import RegisterPage from './features/auth/RegisterPage'
 import App from './App'
 import ProfilePage from './features/profile/ProfilePage'
+import CvListPage from './features/cvs/CvListPage'
 
 const queryClient = new QueryClient()
 
@@ -23,6 +24,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+          <Route path="/" element={<ProtectedRoute><CvListPage /></ProtectedRoute>} />
           <Route path="/*" element={<ProtectedRoute><App /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
