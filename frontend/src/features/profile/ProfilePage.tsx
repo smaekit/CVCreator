@@ -6,6 +6,7 @@ import { SkillsSection } from './SkillsSection'
 import { EducationSection } from './EducationSection'
 import { CertificationsSection } from './CertificationsSection'
 import { LanguagesSection } from './LanguagesSection'
+import { AssignmentsSection } from './AssignmentsSection'
 
 export default function ProfilePage() {
   const queryClient = useQueryClient()
@@ -130,6 +131,8 @@ export default function ProfilePage() {
         <CertificationsSection />
         <hr />
         <LanguagesSection />
+        <hr />
+        <AssignmentsSection />
     </div>
   )
 }

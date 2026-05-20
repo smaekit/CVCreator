@@ -37,3 +37,22 @@ export const createLanguage = (data: { name: string; proficiency: string }) =>
 export const updateLanguage = (id: string, data: { name: string; proficiency: string }) =>
   api.put<LanguageDto>(`/profile/languages/${id}`, data).then(r => r.data)
 export const deleteLanguage = (id: string) => api.delete(`/profile/languages/${id}`)
+
+export interface AssignmentDto {
+  id: string
+  titleSv: string | null; titleEn: string | null
+  descriptionSv: string | null; descriptionEn: string | null
+  client: string; startDate: string; endDate: string | null
+  skillIds: string[]
+}
+type AssignmentBody = Omit<AssignmentDto, 'id' | 'skillIds'>
+export const getAssignments = () => api.get<AssignmentDto[]>('/profile/assignments').then(r => r.data)
+export const createAssignment = (data: AssignmentBody) =>
+  api.post<AssignmentDto>('/profile/assignments', data).then(r => r.data)
+export const updateAssignment = (id: string, data: AssignmentBody) =>
+  api.put<AssignmentDto>(`/profile/assignments/${id}`, data).then(r => r.data)
+export const deleteAssignment = (id: string) => api.delete(`/profile/assignments/${id}`)
+export const attachAssignmentSkill = (id: string, skillId: string) =>
+  api.post(`/profile/assignments/${id}/skills/${skillId}`)
+export const detachAssignmentSkill = (id: string, skillId: string) =>
+  api.delete(`/profile/assignments/${id}/skills/${skillId}`)

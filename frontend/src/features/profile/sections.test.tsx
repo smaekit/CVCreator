@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -6,6 +6,7 @@ import { SkillsSection } from './SkillsSection'
 import { EducationSection } from './EducationSection'
 import { CertificationsSection } from './CertificationsSection'
 import { LanguagesSection } from './LanguagesSection'
+import { AssignmentsSection } from './AssignmentsSection'
 import * as api from './collectionsApi'
 
 vi.mock('./collectionsApi')
@@ -124,5 +125,61 @@ describe('LanguagesSection', () => {
     await userEvent.type(screen.getByPlaceholderText('Language'), 'English')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(api.createLanguage).toHaveBeenCalledWith({ name: 'English', proficiency: 'Fluent' }))
+  })
+})
+
+describe('AssignmentsSection', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('renders existing assignments', async () => {
+    vi.mocked(api.getAssignments).mockResolvedValue([
+      { id: '1', titleSv: 'Projekt A', titleEn: null, descriptionSv: null, descriptionEn: null, client: 'Volvo', startDate: '2023-01-01', endDate: '2023-06-30', skillIds: [] },
+    ])
+    vi.mocked(api.getSkills).mockResolvedValue([])
+    render(<AssignmentsSection />, { wrapper: makeWrapper() })
+    expect(await screen.findByText(/Projekt A/)).toBeInTheDocument()
+    expect(screen.getByText(/Volvo/)).toBeInTheDocument()
+  })
+
+  it('opens add form and calls createAssignment on submit', async () => {
+    vi.mocked(api.getAssignments).mockResolvedValue([])
+    vi.mocked(api.getSkills).mockResolvedValue([])
+    vi.mocked(api.createAssignment).mockResolvedValue({
+      id: '2', titleSv: null, titleEn: null, descriptionSv: null, descriptionEn: null,
+      client: 'IKEA', startDate: '2024-01-01', endDate: null, skillIds: [],
+    })
+    render(<AssignmentsSection />, { wrapper: makeWrapper() })
+    await userEvent.click(screen.getByRole('button', { name: '+ Add assignment' }))
+    await userEvent.type(screen.getByPlaceholderText('Client'), 'IKEA')
+    fireEvent.change(screen.getByLabelText('Start date'), { target: { value: '2024-01-01' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(api.createAssignment).toHaveBeenCalledWith(
+      expect.objectContaining({ client: 'IKEA', startDate: '2024-01-01' })
+    ))
+  })
+
+  it('calls deleteAssignment when Delete is clicked and confirmed', async () => {
+    vi.mocked(api.getAssignments).mockResolvedValue([
+      { id: '1', titleSv: 'Projekt A', titleEn: null, descriptionSv: null, descriptionEn: null, client: 'Volvo', startDate: '2023-01-01', endDate: null, skillIds: [] },
+    ])
+    vi.mocked(api.getSkills).mockResolvedValue([])
+    vi.mocked(api.deleteAssignment).mockResolvedValue(undefined as never)
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    render(<AssignmentsSection />, { wrapper: makeWrapper() })
+    await screen.findByText(/Projekt A/)
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await waitFor(() => expect(vi.mocked(api.deleteAssignment).mock.calls[0][0]).toBe('1'))
+  })
+
+  it('does not delete when confirmation is cancelled', async () => {
+    vi.mocked(api.getAssignments).mockResolvedValue([
+      { id: '1', titleSv: 'Projekt A', titleEn: null, descriptionSv: null, descriptionEn: null, client: 'Volvo', startDate: '2023-01-01', endDate: null, skillIds: [] },
+    ])
+    vi.mocked(api.getSkills).mockResolvedValue([])
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    render(<AssignmentsSection />, { wrapper: makeWrapper() })
+    await screen.findByText(/Projekt A/)
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    expect(api.deleteAssignment).not.toHaveBeenCalled()
   })
 })
