@@ -7,18 +7,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CVCreator.Application.CVs;
 
-public record GetCvQuery(Guid Id) : IRequest<ResolvedCv?>;
+public record GetCvForPreviewQuery(Guid CvId) : IRequest<ResolvedCv?>;
 
-public class GetCvHandler(IApplicationDbContext db, ICurrentUserService currentUser)
-    : IRequestHandler<GetCvQuery, ResolvedCv?>
+public class GetCvForPreviewHandler(IApplicationDbContext db)
+    : IRequestHandler<GetCvForPreviewQuery, ResolvedCv?>
 {
-    public async Task<ResolvedCv?> Handle(GetCvQuery request, CancellationToken ct)
+    public async Task<ResolvedCv?> Handle(GetCvForPreviewQuery request, CancellationToken ct)
     {
-        var cv = await db.CVs.FirstOrDefaultAsync(c => c.Id == request.Id && c.UserId == currentUser.UserId, ct);
+        var cv = await db.CVs.FirstOrDefaultAsync(c => c.Id == request.CvId, ct);
         if (cv is null) return null;
 
-        var profile = await db.Profiles.FirstOrDefaultAsync(p => p.UserId == currentUser.UserId, ct)
-            ?? new() { UserId = currentUser.UserId! };
+        var profile = await db.Profiles.FirstOrDefaultAsync(p => p.UserId == cv.UserId, ct)
+            ?? new() { UserId = cv.UserId };
 
         var cvAssignments = await db.CVAssignments
             .Where(a => a.CVId == cv.Id)

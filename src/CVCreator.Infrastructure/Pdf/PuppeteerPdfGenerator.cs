@@ -12,9 +12,21 @@ public class PuppeteerPdfGenerator(IConfiguration configuration) : IPdfGenerator
         var frontendBase = configuration["Frontend:BaseUrl"] ?? "http://localhost:5173";
         var url = $"{frontendBase}/cv/preview/{cvId}?token={Uri.EscapeDataString(previewToken)}";
 
+        // Use system Chrome path if set (Docker/prod); otherwise download Chrome via BrowserFetcher (local dev).
+        var executablePath = Environment.GetEnvironmentVariable("PUPPETEER_EXECUTABLE_PATH")
+                             ?? configuration["Puppeteer:ExecutablePath"];
+
+        if (string.IsNullOrEmpty(executablePath))
+        {
+            var fetcher = new BrowserFetcher(SupportedBrowser.Chrome);
+            var installed = await fetcher.DownloadAsync();
+            executablePath = installed.GetExecutablePath();
+        }
+
         using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
         {
             Headless = true,
+            ExecutablePath = executablePath,
             Args = ["--no-sandbox", "--disable-setuid-sandbox"]
         });
 

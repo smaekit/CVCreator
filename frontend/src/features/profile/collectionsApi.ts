@@ -56,3 +56,5 @@ export const attachAssignmentSkill = (id: string, skillId: string) =>
   api.post(`/profile/assignments/${id}/skills/${skillId}`)
 export const detachAssignmentSkill = (id: string, skillId: string) =>
   api.delete(`/profile/assignments/${id}/skills/${skillId}`)
+export const setAssignmentSkills = (id: string, skillNames: string[]) =>
+  api.put(`/profile/assignments/${id}/skills`, { skillNames })

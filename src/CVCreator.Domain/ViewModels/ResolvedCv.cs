@@ -40,7 +40,10 @@ public record ResolvedAssignment(
     bool IsHighlighted,
     int DisplayOrder,
     bool IsDescriptionOverridden
-);
+)
+{
+    public List<string> Skills { get; init; } = [];
+}
 
 public record ResolvedSkill(Guid Id, string Name, string? Category, int DisplayOrder);
 

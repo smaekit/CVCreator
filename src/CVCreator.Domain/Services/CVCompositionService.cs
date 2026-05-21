@@ -13,7 +13,8 @@ public static class CVCompositionService
         List<(CVEducation CVEducation, Education Education)> selectedEducations,
         List<(CVCertification CVCertification, Certification Certification)> selectedCertifications,
         List<(CVLanguage CVLanguage, Language Language)> selectedLanguages,
-        List<ResolvedFrontPageGroup>? frontPageGroups = null)
+        List<ResolvedFrontPageGroup>? frontPageGroups = null,
+        Dictionary<Guid, List<string>>? assignmentSkillNames = null)
     {
         var lang = cv.Language;
         var r = BilingualTextResolver.Resolve;
@@ -44,7 +45,10 @@ public static class CVCompositionService
                     a.EndDate?.ToString("yyyy-MM-dd"),
                     cva.IsHighlighted,
                     cva.DisplayOrder,
-                    hasOverride);
+                    hasOverride)
+                {
+                    Skills = assignmentSkillNames?.GetValueOrDefault(a.Id) ?? []
+                };
             }).ToList();
 
         var skills = selectedSkills

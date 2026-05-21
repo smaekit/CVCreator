@@ -1,4 +1,5 @@
 using CVCreator.Application.CVs;
+using CVCreator.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +9,7 @@ namespace CVCreator.API.Controllers;
 [ApiController]
 [Route("api/cvs")]
 [Authorize]
-public class CVsController(ISender sender) : ControllerBase
+public class CVsController(ISender sender, IPreviewTokenService previewTokenService) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -18,6 +19,16 @@ public class CVsController(ISender sender) : ControllerBase
     public async Task<IActionResult> GetOne(Guid id)
     {
         var result = await sender.Send(new GetCvQuery(id));
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpGet("{id:guid}/preview")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetPreview(Guid id, [FromQuery] string token)
+    {
+        if (!previewTokenService.Validate(token, out var cvId) || cvId != id)
+            return Unauthorized();
+        var result = await sender.Send(new GetCvForPreviewQuery(id));
         return result is null ? NotFound() : Ok(result);
     }
 

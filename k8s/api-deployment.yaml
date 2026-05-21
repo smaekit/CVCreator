@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: cvcreator-api
-          image: cvcreator/api:latest
+          image: cvcreatoracr.azurecr.io/cvcreator-api:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -50,6 +50,8 @@ spec:
                 secretKeyRef:
                   name: cvcreator-secrets
                   key: azure-storage-connection-string
+            - name: Frontend__BaseUrl
+              value: http://cvcreator-frontend.cvcreator.svc.cluster.local
             - name: POSTGRES_HOST
               value: postgres.cvcreator.svc.cluster.local
           readinessProbe:

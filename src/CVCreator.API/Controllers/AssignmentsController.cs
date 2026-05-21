@@ -48,6 +48,13 @@ public class AssignmentsController(ISender sender) : ControllerBase
         return deleted ? NoContent() : NotFound();
     }
 
+    [HttpPut("{id:guid}/skills")]
+    public async Task<IActionResult> SetSkills(Guid id, SetSkillsRequest request)
+    {
+        var ok = await sender.Send(new SetAssignmentSkillsCommand(id, request.SkillNames));
+        return ok ? NoContent() : NotFound();
+    }
+
     [HttpPost("{id:guid}/skills/{skillId:guid}")]
     public async Task<IActionResult> AttachSkill(Guid id, Guid skillId)
     {
@@ -67,3 +74,5 @@ public record AssignmentRequest(
     string? TitleSv, string? TitleEn,
     string? DescriptionSv, string? DescriptionEn,
     string Client, string StartDate, string? EndDate = null);
+
+public record SetSkillsRequest(List<string> SkillNames);

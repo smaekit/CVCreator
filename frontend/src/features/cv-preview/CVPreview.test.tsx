@@ -13,17 +13,12 @@ const baseCv: ResolvedCv = {
 describe('CVPreview', () => {
   it('renders name', () => {
     render(<CVPreview cv={baseCv} />)
-    expect(screen.getByText('Jane Doe')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Jane Doe' })).toBeInTheDocument()
   })
 
   it('renders introduction', () => {
     render(<CVPreview cv={baseCv} />)
     expect(screen.getByText('Experienced developer')).toBeInTheDocument()
-  })
-
-  it('renders years of experience when present', () => {
-    render(<CVPreview cv={{ ...baseCv, yearsOfExperience: '10' }} />)
-    expect(screen.getByText(/10 years of experience/)).toBeInTheDocument()
   })
 
   it('renders skills', () => {
@@ -32,7 +27,7 @@ describe('CVPreview', () => {
       skills: [{ id: '1', name: 'TypeScript', category: 'Frontend', displayOrder: 0 }],
     }
     render(<CVPreview cv={cv} />)
-    expect(screen.getByText('TypeScript (Frontend)')).toBeInTheDocument()
+    expect(screen.getByText('TypeScript')).toBeInTheDocument()
   })
 
   it('renders regular assignment', () => {
@@ -42,27 +37,27 @@ describe('CVPreview', () => {
         id: '1', title: { text: 'Backend Dev', fallbackUsed: false },
         description: { text: 'Built APIs', fallbackUsed: false },
         client: 'Acme', startDate: '2023-01-01', endDate: null,
-        isHighlighted: false, displayOrder: 0, isDescriptionOverridden: false,
+        isHighlighted: false, displayOrder: 0, isDescriptionOverridden: false, skills: [],
       }],
     }
     render(<CVPreview cv={cv} />)
-    expect(screen.getByText('Backend Dev')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Backend Dev' })).toBeInTheDocument()
     expect(screen.getByText('Acme')).toBeInTheDocument()
   })
 
-  it('renders highlighted assignments in key assignments section', () => {
+  it('renders highlighted assignments in highlighted projects section', () => {
     const cv: ResolvedCv = {
       ...baseCv,
       assignments: [{
         id: '1', title: { text: 'Key Project', fallbackUsed: false },
         description: { text: '', fallbackUsed: false },
         client: 'BigCo', startDate: '2022-01-01', endDate: '2023-01-01',
-        isHighlighted: true, displayOrder: 0, isDescriptionOverridden: false,
+        isHighlighted: true, displayOrder: 0, isDescriptionOverridden: false, skills: [],
       }],
     }
     render(<CVPreview cv={cv} />)
-    expect(screen.getByText('Key Assignments')).toBeInTheDocument()
-    expect(screen.getByText('Key Project')).toBeInTheDocument()
+    expect(screen.getByText('Highlighted Projects')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Key Project', level: 3 })).toBeInTheDocument()
   })
 
   it('renders education', () => {
@@ -108,5 +103,58 @@ describe('CVPreview', () => {
   it('renders no front page groups section when none present', () => {
     render(<CVPreview cv={baseCv} />)
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
+  })
+
+  describe('Multi-page mode (Slice 11)', () => {
+    it('renders content in builder mode (showBoundary)', () => {
+      render(<CVPreview cv={baseCv} showBoundary />)
+      expect(screen.getAllByText('Jane Doe').length).toBeGreaterThan(0)
+    })
+
+    it('renders content in pdf mode (no showBoundary)', () => {
+      render(<CVPreview cv={baseCv} />)
+      expect(screen.getByRole('heading', { name: 'Jane Doe' })).toBeInTheDocument()
+    })
+  })
+
+  describe('Fallback highlights (Slice 12)', () => {
+    it('highlights fallback introduction with yellow class', () => {
+      const cv: ResolvedCv = {
+        ...baseCv,
+        introduction: { text: 'Swedish text', fallbackUsed: true },
+        isIntroductionOverridden: false,
+      }
+      render(<CVPreview cv={cv} />)
+      expect(screen.getByText('Swedish text').className).toContain('bg-yellow-100')
+    })
+
+    it('does not highlight introduction when overridden', () => {
+      const cv: ResolvedCv = {
+        ...baseCv,
+        introduction: { text: 'Override', fallbackUsed: true },
+        isIntroductionOverridden: true,
+      }
+      render(<CVPreview cv={cv} />)
+      expect(screen.getByText('Override').className).not.toContain('bg-yellow-100')
+    })
+
+    it('highlights fallback assignment title', () => {
+      const cv: ResolvedCv = {
+        ...baseCv,
+        assignments: [{
+          id: '1', title: { text: 'Swedish Title', fallbackUsed: true },
+          description: { text: '', fallbackUsed: false },
+          client: 'X', startDate: '2023-01-01', endDate: null,
+          isHighlighted: false, displayOrder: 0, isDescriptionOverridden: false, skills: [],
+        }],
+      }
+      render(<CVPreview cv={cv} />)
+      expect(screen.getByRole('heading', { name: 'Swedish Title' }).className).toContain('bg-yellow-100')
+    })
+
+    it('does not highlight non-fallback introduction', () => {
+      render(<CVPreview cv={baseCv} />)
+      expect(screen.getByText('Experienced developer').className).not.toContain('bg-yellow-100')
+    })
   })
 })

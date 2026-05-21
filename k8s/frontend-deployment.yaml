@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: cvcreator-frontend
-          image: cvcreator/frontend:latest
+          image: cvcreatoracr.azurecr.io/cvcreator-frontend:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 80

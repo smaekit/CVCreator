@@ -7,6 +7,7 @@ export interface ResolvedAssignment {
   title: ResolvedText; description: ResolvedText
   client: string; startDate: string; endDate: string | null
   isHighlighted: boolean; displayOrder: number; isDescriptionOverridden: boolean
+  skills: string[]
 }
 
 export interface ResolvedSkill { id: string; name: string; category: string | null; displayOrder: number }
@@ -41,7 +42,7 @@ export interface ResolvedCv {
   frontPageGroups?: ResolvedFrontPageGroup[]
 }
 
-export interface SelectionItem { id: string; displayOrder: number; isHighlighted?: boolean }
+export interface SelectionItem { id: string; displayOrder: number; isHighlighted?: boolean; descriptionOverride?: string | null }
 
 export interface SelectionsBody {
   assignments: SelectionItem[]
@@ -54,3 +55,7 @@ export interface SelectionsBody {
 export const getCv = (id: string) => api.get<ResolvedCv>(`/cvs/${id}`).then(r => r.data)
 export const updateSelections = (id: string, body: SelectionsBody) =>
   api.put(`/cvs/${id}/selections`, body)
+export const updateOverrides = (id: string, body: { introductionOverride: string | null; yearsOfExperience: string | null }) =>
+  api.put(`/cvs/${id}/overrides`, body)
+export const downloadPdf = (id: string): Promise<Blob> =>
+  api.post(`/cvs/${id}/pdf`, {}, { responseType: 'blob' }).then(r => r.data)

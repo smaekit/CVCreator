@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: cvcreator
       POSTGRES_DB: cvcreator
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -16,7 +16,7 @@ services:
       - "10000:10000"
     volumes:
       - azurite_data:/data
-    command: azurite-blob --blobHost 0.0.0.0 --blobPort 10000
+    command: azurite-blob --blobHost 0.0.0.0 --blobPort 10000 --skipApiVersionCheck
 
   api:
     build:
@@ -27,6 +27,7 @@ services:
       ASPNETCORE_URLS: http://+:5000
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=cvcreator;Username=cvcreator;Password=cvcreator"
       AzureStorage__ConnectionString: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OGLjX+N6+Lp87cs6quJSnAh2VozLjRJoLJlBNQ==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
+      Frontend__BaseUrl: "http://frontend:80"
     ports:
       - "5000:5000"
     depends_on:

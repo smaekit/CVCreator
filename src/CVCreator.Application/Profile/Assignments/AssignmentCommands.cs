@@ -26,6 +26,7 @@ public record GetAssignmentsQuery : IRequest<List<AssignmentDto>>;
 public record GetAssignmentQuery(Guid Id) : IRequest<AssignmentDto?>;
 public record AttachSkillCommand(Guid AssignmentId, Guid SkillId) : IRequest<bool>;
 public record DetachSkillCommand(Guid AssignmentId, Guid SkillId) : IRequest<bool>;
+public record SetAssignmentSkillsCommand(Guid AssignmentId, List<string> SkillNames) : IRequest<bool>;
 
 public class CreateAssignmentHandler(IApplicationDbContext db, ICurrentUserService currentUser)
     : IRequestHandler<CreateAssignmentCommand, AssignmentDto>
@@ -102,6 +103,41 @@ public class DeleteAssignmentHandler(IApplicationDbContext db, ICurrentUserServi
         var a = await db.Assignments.FirstOrDefaultAsync(a => a.Id == req.Id && a.UserId == currentUser.UserId, ct);
         if (a is null) return false;
         db.Assignments.Remove(a);
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
+}
+
+public class SetAssignmentSkillsHandler(IApplicationDbContext db, ICurrentUserService currentUser)
+    : IRequestHandler<SetAssignmentSkillsCommand, bool>
+{
+    public async Task<bool> Handle(SetAssignmentSkillsCommand req, CancellationToken ct)
+    {
+        var assignment = await db.Assignments
+            .Include(a => a.AssignmentSkills)
+            .FirstOrDefaultAsync(a => a.Id == req.AssignmentId && a.UserId == currentUser.UserId, ct);
+        if (assignment is null) return false;
+
+        var skillIds = new List<Guid>();
+        foreach (var raw in req.SkillNames)
+        {
+            var name = raw.Trim();
+            if (string.IsNullOrEmpty(name)) continue;
+            var lower = name.ToLower();
+            var skill = await db.Skills.FirstOrDefaultAsync(
+                s => s.UserId == currentUser.UserId && s.Name.ToLower() == lower, ct);
+            if (skill is null)
+            {
+                skill = new Skill { UserId = currentUser.UserId!, Name = name };
+                db.Skills.Add(skill);
+                await db.SaveChangesAsync(ct);
+            }
+            skillIds.Add(skill.Id);
+        }
+
+        assignment.AssignmentSkills.Clear();
+        foreach (var skillId in skillIds)
+            assignment.AssignmentSkills.Add(new AssignmentSkill { AssignmentId = req.AssignmentId, SkillId = skillId });
         await db.SaveChangesAsync(ct);
         return true;
     }
