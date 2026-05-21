@@ -212,7 +212,7 @@ describe('CvBuilderPage', () => {
       global.URL.revokeObjectURL = vi.fn()
       render(<CvBuilderPage />, { wrapper: makeWrapper() })
       await userEvent.click(await screen.findByLabelText('Export PDF'))
-      await waitFor(() => expect(builderApi.downloadPdf).toHaveBeenCalledWith('cv-1'))
+      await waitFor(() => expect(builderApi.downloadPdf).toHaveBeenCalledWith('cv-1', expect.any(String)))
     })
   })
 

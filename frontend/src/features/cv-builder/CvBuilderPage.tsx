@@ -5,6 +5,7 @@ import {
   User, Star, Rocket, GraduationCap, Award, Globe, ChevronDown,
   Pencil, Plus, ArrowLeft, Download, Loader2, Sparkles, LayoutGrid,
 } from 'lucide-react'
+import { CV_THEMES, type CvThemeKey } from '../cv-preview/cvThemes'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import {
@@ -187,6 +188,14 @@ export default function CvBuilderPage() {
   const [yearsOfExperience, setYearsOfExperience] = useState('')
   const [isExporting, setIsExporting] = useState(false)
   const [aiModal, setAiModal] = useState<{ text: string; onAccept: (text: string) => void } | null>(null)
+  const [themeKey, setThemeKey] = useState<CvThemeKey>(() =>
+    (localStorage.getItem('cv-theme') as CvThemeKey | null) ?? 'burgundy'
+  )
+
+  function switchTheme(key: CvThemeKey) {
+    setThemeKey(key)
+    localStorage.setItem('cv-theme', key)
+  }
 
   useEffect(() => {
     if (cv && !initialized) {
@@ -304,7 +313,7 @@ export default function CvBuilderPage() {
     if (!id) return
     setIsExporting(true)
     try {
-      const blob = await downloadPdf(id)
+      const blob = await downloadPdf(id, themeKey)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -362,6 +371,27 @@ export default function CvBuilderPage() {
           >
             Go to profile
           </Link>
+
+          {/* Theme switcher */}
+          <div className="flex items-center gap-1.5 bg-gray-100 rounded-lg px-2 py-1.5">
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mr-0.5">Theme</span>
+            {(['burgundy', 'nordic', 'charcoal'] as CvThemeKey[]).map(key => (
+              <button
+                key={key}
+                type="button"
+                title={CV_THEMES[key].label}
+                onClick={() => switchTheme(key)}
+                className={cn(
+                  'w-4 h-4 rounded-full transition-all duration-150',
+                  themeKey === key
+                    ? 'ring-2 ring-offset-1 ring-gray-500 scale-110'
+                    : 'opacity-50 hover:opacity-80 hover:scale-105',
+                )}
+                style={{ background: CV_THEMES[key].swatch }}
+              />
+            ))}
+          </div>
+
           {saveMutation.isPending && (
             <span className="text-xs text-gray-400 flex items-center gap-1.5 bg-gray-50 px-2.5 py-1.5 rounded-lg">
               <Loader2 className="w-3 h-3 animate-spin text-teal-500" />
@@ -756,7 +786,7 @@ export default function CvBuilderPage() {
         {/* ── Right panel — live preview ── */}
         <main className="flex-1 overflow-y-auto bg-gray-100 min-w-0 flex justify-center">
           {cv
-            ? <CVPreview cv={cv} showBoundary />
+            ? <CVPreview cv={cv} showBoundary theme={CV_THEMES[themeKey]} />
             : <div className="text-gray-400 mt-20">Loading…</div>}
         </main>
       </div>

@@ -57,5 +57,5 @@ export const updateSelections = (id: string, body: SelectionsBody) =>
   api.put(`/cvs/${id}/selections`, body)
 export const updateOverrides = (id: string, body: { introductionOverride: string | null; yearsOfExperience: string | null }) =>
   api.put(`/cvs/${id}/overrides`, body)
-export const downloadPdf = (id: string): Promise<Blob> =>
-  api.post(`/cvs/${id}/pdf`, {}, { responseType: 'blob' }).then(r => r.data)
+export const downloadPdf = (id: string, theme?: string): Promise<Blob> =>
+  api.post(`/cvs/${id}/pdf`, {}, { params: theme ? { theme } : undefined, responseType: 'blob' }).then(r => r.data)

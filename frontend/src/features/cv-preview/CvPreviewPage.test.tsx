@@ -33,23 +33,22 @@ describe('CvPreviewPage', () => {
 
   it('renders CVPreview after fetching cv data', async () => {
     vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve(baseCvResponse),
     } as Response)
     renderPage()
     expect(await screen.findByRole('heading', { name: 'Test User' })).toBeInTheDocument()
   })
 
-  it('fetches cv using token from query param as Authorization header', async () => {
+  it('fetches cv using token from query param in the URL', async () => {
     vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve(baseCvResponse),
     } as Response)
     renderPage('cv-99', 'my-preview-token')
     await screen.findByRole('heading', { name: 'Test User' })
     expect(global.fetch).toHaveBeenCalledWith(
-      '/api/cvs/cv-99',
-      expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: 'Bearer my-preview-token' }),
-      })
+      '/api/cvs/cv-99/preview?token=my-preview-token'
     )
   })
 })

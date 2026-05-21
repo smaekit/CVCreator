@@ -60,9 +60,9 @@ public class CVsController(ISender sender, IPreviewTokenService previewTokenServ
     }
 
     [HttpPost("{id:guid}/pdf")]
-    public async Task<IActionResult> GeneratePdf(Guid id)
+    public async Task<IActionResult> GeneratePdf(Guid id, [FromQuery] string? theme = null)
     {
-        var result = await sender.Send(new GeneratePdfCommand(id));
+        var result = await sender.Send(new GeneratePdfCommand(id, theme));
         if (result is null) return NotFound();
         return File(result.Bytes, "application/pdf",
             System.Net.Http.Headers.ContentDispositionHeaderValue.Parse(

@@ -78,7 +78,8 @@ describe('CVPreview', () => {
       languages: [{ id: '1', name: 'Swedish', proficiency: 'Native', displayOrder: 0 }],
     }
     render(<CVPreview cv={cv} />)
-    expect(screen.getByText('Swedish — Native')).toBeInTheDocument()
+    expect(screen.getByText('Swedish')).toBeInTheDocument()
+    expect(screen.getByText('Native')).toBeInTheDocument()
   })
 
   it('renders front page groups below highlighted assignments', () => {

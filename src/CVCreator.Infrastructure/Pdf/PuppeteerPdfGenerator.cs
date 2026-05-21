@@ -7,10 +7,12 @@ namespace CVCreator.Infrastructure.Pdf;
 
 public class PuppeteerPdfGenerator(IConfiguration configuration) : IPdfGenerator
 {
-    public async Task<byte[]> GenerateAsync(Guid cvId, string previewToken, CancellationToken ct = default)
+    public async Task<byte[]> GenerateAsync(Guid cvId, string previewToken, string? theme = null, CancellationToken ct = default)
     {
         var frontendBase = configuration["Frontend:BaseUrl"] ?? "http://localhost:5173";
         var url = $"{frontendBase}/cv/preview/{cvId}?token={Uri.EscapeDataString(previewToken)}";
+        if (!string.IsNullOrEmpty(theme))
+            url += $"&theme={Uri.EscapeDataString(theme)}";
 
         // Use system Chrome path if set (Docker/prod); otherwise download Chrome via BrowserFetcher (local dev).
         var executablePath = Environment.GetEnvironmentVariable("PUPPETEER_EXECUTABLE_PATH")
