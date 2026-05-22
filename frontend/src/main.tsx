@@ -9,6 +9,7 @@ import ProfilePage from './features/profile/ProfilePage'
 import CvListPage from './features/cvs/CvListPage'
 import CvBuilderPage from './features/cv-builder/CvBuilderPage'
 import CvPreviewPage from './features/cv-preview/CvPreviewPage'
+import LandingPage from './features/landing/LandingPage'
 import { AppLayout } from './components/layout/AppLayout'
 
 const queryClient = new QueryClient()
@@ -23,6 +24,9 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
+          {/* Public marketing — no shell */}
+          <Route path="/" element={<LandingPage />} />
+
           {/* Public routes — no shell */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -36,7 +40,7 @@ createRoot(document.getElementById('root')!).render(
 
           {/* Protected routes — with sidebar shell */}
           <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-            <Route path="/" element={<CvListPage />} />
+            <Route path="/cvs" element={<CvListPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>
 

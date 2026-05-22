@@ -21,7 +21,7 @@ function getUserInitials(email: string): string {
 }
 
 const navItems = [
-  { to: '/', label: 'My CVs', icon: FileText, end: true },
+  { to: '/cvs', label: 'My CVs', icon: FileText, end: true },
   { to: '/profile', label: 'Profile', icon: UserCircle, end: false },
 ]
 
@@ -67,7 +67,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <div className="w-7 h-7 rounded-md bg-teal-500 flex items-center justify-center shrink-0">
           <FileCheck2 size={14} className="text-white" />
         </div>
-        <span className="font-semibold text-slate-100 tracking-tight">CVCreator</span>
+        <span className="font-semibold text-slate-100 tracking-tight">Pitchpaper</span>
       </div>
 
       {/* Nav */}
