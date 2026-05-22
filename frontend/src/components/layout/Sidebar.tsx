@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { FileText, UserCircle, LogOut, FileCheck2, Menu } from 'lucide-react'
+import { FileText, UserCircle, LogOut, FileCheck2, Menu, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { useState } from 'react'
@@ -23,6 +23,7 @@ function getUserInitials(email: string): string {
 const navItems = [
   { to: '/cvs', label: 'My CVs', icon: FileText, end: true },
   { to: '/profile', label: 'Profile', icon: UserCircle, end: false },
+  { to: '/admin', label: 'Admin', icon: BarChart3, end: false },
 ]
 
 function NavItems({ onNavigate }: { onNavigate?: () => void }) {

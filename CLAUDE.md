@@ -2,6 +2,8 @@
 
 Multi-user CV Creator web app. One Profile per user, many CVs per user. Each CV is a named selection of profile data targeted at a specific company, exportable as a pixel-perfect A4 PDF in Swedish or English.
 
+**Brand split**: the user-facing app is branded **Pitchpaper** (marketing landing, sidebar wordmark, browser title, copy in auth pages). The codebase, .NET namespaces (`CVCreator.Domain`, `CVCreator.API`, …), folder names, and k8s manifests all remain `CVCreator`. Don't propose a code-side rename unless asked — the namespaces, CI, and infra would all churn.
+
 ## Architecture
 
 Clean Architecture with CQRS:
@@ -68,6 +70,14 @@ dotnet test
 
 **CV naming**: Auto-generated as `{FirstName} {LastName}, {Company}, {SV/EN}` — do not add logic to this.
 
+**Frontend routes**: `/` is the **public landing** (`features/landing/LandingPage.tsx`), no auth required. The CV list lives at `/cvs` (was at `/`). Login navigates to `/cvs` on success; the sidebar's "My CVs" link and the builder's back arrow both target `/cvs`. The fallback `*` route redirects to `/`. Public routes (`/`, `/login`, `/register`, `/cv/preview/:id`) render outside `AppLayout`; protected routes go through `<ProtectedRoute><AppLayout/>`. The full-screen builder (`/cv/:id`) is protected but skips the sidebar shell.
+
+**CV themes**: `CvTheme` (in `cv-preview/cvThemes.ts`) has an optional `monoFont` field. When set, skill chips in `CVPreview.tsx` render in that font (with +2% letter-spacing) and fall back to `bodyFont` otherwise. Burgundy uses IBM Plex Mono; Charcoal uses JetBrains Mono; Nordic leaves it unset. Each theme also pairs its own display/body fonts — don't add fonts to `index.html` unless a theme actually uses them.
+
+**Auth pages**: `LoginPage.tsx` and `RegisterPage.tsx` share `AuthShell.tsx` (split editorial layout — dark editorial side + cream form side) and the `TextField` / `SubmitButton` primitives exported from it. Keep visual changes in `AuthShell`, not the individual pages.
+
+**Profile/builder shared primitives**: `AssignmentsSection.tsx` exports `SectionCard`, `EmptyState`, `IconButton`, and `FieldLabel` which the other profile sections (Skills/Education/Certifications/Languages) import. `CvBuilderPage.tsx` has its own per-section accent palette (`ACCENT` map) — these are visually aligned with the profile palette but defined locally so the builder stays a single-file page.
+
 ## Stack Versions
 
 | | Version |
@@ -108,10 +118,15 @@ tests/
 frontend/
   src/
     features/
-      auth/            — login/register forms
+      landing/         — LandingPage (public marketing, "Pitchpaper" brand)
+      auth/            — LoginPage, RegisterPage, shared AuthShell
       profile/         — BilingualFieldPair, picture upload, all profile sections
+      cvs/             — CvListPage (CV gallery at /cvs) + cvsApi
       cv-builder/      — split panel, useAIStream, useMissingTranslations
-      cv-preview/      — CVPreview.tsx (shared), useA4Overflow
+      cv-preview/      — CVPreview.tsx (shared), cvThemes.ts, useA4Overflow
+    components/
+      layout/          — AppLayout (sidebar shell), Sidebar (Pitchpaper wordmark, /cvs nav)
+      ui/              — shadcn-style primitives (button, sheet, switch, tooltip)
 k8s/                   — Kubernetes manifests (AKS production)
 ```
 
