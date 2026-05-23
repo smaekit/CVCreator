@@ -9,7 +9,7 @@ public class IdentityService(
 {
     public async Task<(bool Success, string[] Errors)> RegisterAsync(string email, string password)
     {
-        var user = new ApplicationUser { UserName = email, Email = email };
+        var user = new ApplicationUser { UserName = email, Email = email, CreatedAt = DateTime.UtcNow };
         var result = await userManager.CreateAsync(user, password);
         return result.Succeeded
             ? (true, [])
@@ -22,6 +22,9 @@ public class IdentityService(
         if (user is null) return null;
 
         var valid = await userManager.CheckPasswordAsync(user, password);
-        return valid ? jwtService.GenerateToken(user.Id, user.Email!) : null;
+        if (!valid) return null;
+
+        var roles = await userManager.GetRolesAsync(user);
+        return jwtService.GenerateToken(user.Id, user.Email!, roles);
     }
 }

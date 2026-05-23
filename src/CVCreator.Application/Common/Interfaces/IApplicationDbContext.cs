@@ -18,5 +18,6 @@ public interface IApplicationDbContext
     DbSet<CVCreator.Domain.Entities.CVLanguage> CVLanguages { get; }
     DbSet<CVCreator.Domain.Entities.CVFrontPageGroup> CVFrontPageGroups { get; }
     DbSet<CVCreator.Domain.Entities.CVFrontPageGroupItem> CVFrontPageGroupItems { get; }
+    DbSet<CVCreator.Domain.Entities.PdfDownload> PdfDownloads { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

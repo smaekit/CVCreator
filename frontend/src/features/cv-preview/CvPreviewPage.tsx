@@ -20,5 +20,17 @@ export default function CvPreviewPage() {
   }, [id, token])
 
   if (!cv) return <div>Loading…</div>
-  return <CVPreview cv={cv} theme={theme} />
+  return (
+    <>
+      {/* Authoritative print page setup. Tells Chrome exactly what an A4 page is
+          and that there are no margins. Overrides whatever defaults the printToPDF
+          protocol would apply. Combined with PuppeteerSharp's PreferCSSPageSize
+          this becomes the single source of truth for page geometry. */}
+      <style>{`
+        @page { size: 794px 1123px; margin: 0; }
+        html, body { margin: 0; padding: 0; }
+      `}</style>
+      <CVPreview cv={cv} theme={theme} />
+    </>
+  )
 }

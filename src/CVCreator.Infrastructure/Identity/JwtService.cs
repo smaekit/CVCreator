@@ -9,18 +9,19 @@ namespace CVCreator.Infrastructure.Identity;
 
 public class JwtService(IConfiguration configuration) : IJwtService
 {
-    public string GenerateToken(string userId, string email)
+    public string GenerateToken(string userId, string email, IEnumerable<string> roles)
     {
         var secret = configuration["Jwt:Secret"]!;
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, userId),
-            new Claim(JwtRegisteredClaimNames.Email, email),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Sub, userId),
+            new(JwtRegisteredClaimNames.Email, email),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
+        claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
 
         var token = new JwtSecurityToken(
             issuer: configuration["Jwt:Issuer"],

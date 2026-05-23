@@ -1,10 +1,11 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3, Users, FileText, Download, TrendingUp, TrendingDown,
   Sparkles, Building2, Activity, Palette, Calendar, Check, X,
-  Target, Zap, AlertCircle, Repeat,
+  Target, Zap, AlertCircle, Repeat, Loader2,
 } from 'lucide-react'
-import { adminMock, type TimePoint } from './adminMock'
+import { getAdminStats, type AdminStats, type TimePoint } from './adminApi'
 import { cn } from '@/lib/utils'
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
@@ -32,8 +33,14 @@ function shortDate(d: Date, granularity: 'day' | 'week' | 'month'): string {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminDashboardPage() {
-  const data = adminMock
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily')
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['admin-stats', 30],
+    queryFn: () => getAdminStats(30),
+  })
+
+  if (isLoading) return <AdminLoading />
+  if (isError || !data) return <AdminError error={error} onRetry={refetch} />
 
   const usersDelta = deltaPct(data.kpis.totalUsers.value, data.kpis.totalUsers.prev)
   const cvsDelta = deltaPct(data.kpis.totalCvs.value, data.kpis.totalCvs.prev)
@@ -72,15 +79,9 @@ export default function AdminDashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-800 ring-1 ring-amber-200"
-              title="Backend stats endpoint not wired yet — replace adminMock.ts with API data."
-            >
-              <AlertCircle className="h-3 w-3" />
-              Mock data
-            </span>
             <button
               type="button"
+              onClick={() => refetch()}
               className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-900/10 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
             >
               <Calendar className="h-3 w-3" />
@@ -328,9 +329,7 @@ export default function AdminDashboardPage() {
 
         {/* Footer */}
         <p className="mt-6 text-center text-[11px] text-zinc-400">
-          Generated {data.generatedAt.toLocaleString()} · Replace
-          <code className="mx-1 rounded bg-zinc-100 px-1 py-0.5 font-mono text-[10px] text-zinc-700">adminMock.ts</code>
-          with a real <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[10px] text-zinc-700">/admin/stats</code> endpoint to wire live data.
+          Generated {data.generatedAt.toLocaleString()}
         </p>
       </div>
 
@@ -633,7 +632,7 @@ function ActivityIcon({ type }: { type: 'register' | 'cv' | 'pdf' }) {
 
 // ─── PricingReadiness ────────────────────────────────────────────────────────
 
-function PricingReadiness({ data }: { data: typeof adminMock.pricing }) {
+function PricingReadiness({ data }: { data: AdminStats['pricing'] }) {
   const verdictTone = {
     emerald: { bg: 'from-emerald-500 to-teal-600', chip: 'bg-emerald-100 text-emerald-800' },
     amber:   { bg: 'from-amber-500 to-orange-500', chip: 'bg-amber-100 text-amber-800' },
@@ -799,6 +798,52 @@ function ProjStat({ icon, label, value, unit }: { icon: React.ReactNode; label: 
         {value}
       </p>
       <p className="mt-0.5 text-[10px] text-zinc-500">{unit}</p>
+    </div>
+  )
+}
+
+// ─── Loading / error states ──────────────────────────────────────────────────
+
+function AdminLoading() {
+  return (
+    <div className="grid min-h-screen place-items-center bg-zinc-50/60">
+      <div className="flex flex-col items-center gap-3 text-zinc-500">
+        <Loader2 className="h-7 w-7 animate-spin" />
+        <p className="text-sm font-medium">Loading dashboard…</p>
+      </div>
+    </div>
+  )
+}
+
+function AdminError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+  const msg =
+    typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as { message: unknown }).message)
+      : 'Could not load admin stats.'
+  return (
+    <div className="grid min-h-screen place-items-center bg-zinc-50/60 px-6">
+      <div className="max-w-md rounded-2xl border border-rose-200 bg-white p-6 text-center shadow-sm">
+        <span className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200">
+          <AlertCircle className="h-5 w-5" />
+        </span>
+        <h2
+          className="mt-3 text-lg tracking-tight"
+          style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700 }}
+        >
+          Couldn't load stats
+        </h2>
+        <p className="mt-1 text-sm text-zinc-600">{msg}</p>
+        <p className="mt-1 text-xs text-zinc-400">
+          You may not have admin permissions, or the API is unreachable.
+        </p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
+        >
+          Retry
+        </button>
+      </div>
     </div>
   )
 }

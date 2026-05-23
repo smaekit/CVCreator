@@ -78,6 +78,12 @@ dotnet test
 
 **Profile/builder shared primitives**: `AssignmentsSection.tsx` exports `SectionCard`, `EmptyState`, `IconButton`, and `FieldLabel` which the other profile sections (Skills/Education/Certifications/Languages) import. `CvBuilderPage.tsx` has its own per-section accent palette (`ACCENT` map) — these are visually aligned with the profile palette but defined locally so the builder stays a single-file page.
 
+**Admin role & seeding**: Identity is wired with `AddRoles<IdentityRole>()`. JWT carries role claims via `JwtService.GenerateToken(userId, email, roles)` — callers fetch roles with `UserManager.GetRolesAsync` before issuing. The `Admin` role is bootstrapped by `AdminSeeder.SeedAsync` on every app startup (Program.cs, post-migrate) — it idempotently ensures the role exists, ensures the user from `Admin:Email` config exists (creates with `Admin:Password` if missing), and assigns the role. Config lives in `appsettings.json` for dev / K8s secret for prod (same pattern as JWT secret). `[Authorize(Roles = "Admin")]` on `AdminController` gates `/api/admin/*`. AdminSeeder is a no-op when `Admin:Email`/`Admin:Password` are missing — safe for environments that shouldn't have one.
+
+**PdfDownloads audit table**: Every successful PDF render writes a row `(Id, UserId, CvId, ThemeKey, GeneratedAt)` from `GeneratePdfCommand`. This is the **only** source for theme usage analytics — see [docs/adr/0001-theme-usage-derived-from-pdf-exports.md](docs/adr/0001-theme-usage-derived-from-pdf-exports.md). Don't add a `CV.ThemeKey` column unless you've read that ADR and have a reason.
+
+**Admin stats endpoint**: `GET /api/admin/stats?days=30` returns the whole dashboard payload in one call. Implementation in `Application/Admin/GetAdminStats/`. Bucketing is done in-memory (`DailyBuckets`, `WeeklyBucketsFrom`, `MonthlyBucketsFrom` helpers) after pulling raw rows — fine at our scale, avoids EF GroupBy translation headaches. All time bucketing is **UTC**. User data is exposed to the handler via `IAdminUserQueries` (Application interface, Infrastructure implementation) so the handler doesn't need to know about `ApplicationUser` / `IdentityDbContext`.
+
 ## Stack Versions
 
 | | Version |
@@ -95,22 +101,23 @@ dotnet test
 ```
 src/
   CVCreator.Domain/
-    Entities/          — Profile, CV, Assignment, Skill, Education, etc.
+    Entities/          — Profile, CV, Assignment, Skill, Education, PdfDownload, etc.
     Services/          — BilingualTextResolver, CVCompositionService, CVNameGenerator
     ViewModels/        — ResolvedCv and nested record types
   CVCreator.Application/
     Auth/              — Register, Login commands
     Profiles/          — GetProfile, UpdateProfile, UploadPicture commands
     CVs/               — CreateCv, ListCvs, UpdateCvSelections, GetResolvedCv, etc.
-    Common/Interfaces/ — IApplicationDbContext, ICurrentUserService, IFileStorage, etc.
+    Admin/GetAdminStats/ — single MediatR query for /api/admin/stats payload
+    Common/Interfaces/ — IApplicationDbContext, ICurrentUserService, IFileStorage, IAdminUserQueries, etc.
   CVCreator.Infrastructure/
     Persistence/       — AppDbContext (EF Core + Npgsql)
-    Identity/          — IdentityService, JwtService, PreviewTokenService
+    Identity/          — IdentityService, JwtService, PreviewTokenService, AdminSeeder, AdminUserQueries
     Storage/           — AzureBlobStorage, FakeFileStorage (test double)
     AI/                — OpenAiTextService
     Pdf/               — PuppeteerPdfGenerator
   CVCreator.API/
-    Controllers/       — AuthController, ProfileController, CvsController, AiController
+    Controllers/       — AuthController, ProfileController, CvsController, AiController, AdminController
     Services/          — CurrentUserService
 tests/
   CVCreator.Domain.Tests/       — pure unit tests, no DB
@@ -124,9 +131,13 @@ frontend/
       cvs/             — CvListPage (CV gallery at /cvs) + cvsApi
       cv-builder/      — split panel, useAIStream, useMissingTranslations
       cv-preview/      — CVPreview.tsx (shared), cvThemes.ts, useA4Overflow
+      admin/           — AdminDashboardPage + adminApi (live /api/admin/stats query)
     components/
       layout/          — AppLayout (sidebar shell), Sidebar (Pitchpaper wordmark, /cvs nav)
       ui/              — shadcn-style primitives (button, sheet, switch, tooltip)
+docs/
+  PRD.md
+  adr/                 — Architecture Decision Records (start with 0001-theme-usage-derived-from-pdf-exports)
 k8s/                   — Kubernetes manifests (AKS production)
 ```
 
@@ -139,7 +150,9 @@ kubectl create secret generic cvcreator-secrets --namespace=cvcreator \
   --from-literal=postgres-password=<...> \
   --from-literal=jwt-secret=<...> \
   --from-literal=openai-api-key=<...> \
-  --from-literal=azure-storage-connection-string=<...>
+  --from-literal=azure-storage-connection-string=<...> \
+  --from-literal=admin-email=<...> \
+  --from-literal=admin-password=<...>
 kubectl apply -f k8s/postgres-statefulset.yaml
 kubectl apply -f k8s/api-deployment.yaml
 kubectl apply -f k8s/frontend-deployment.yaml

@@ -23,6 +23,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<CVLanguage> CVLanguages => Set<CVLanguage>();
     public DbSet<CVFrontPageGroup> CVFrontPageGroups => Set<CVFrontPageGroup>();
     public DbSet<CVFrontPageGroupItem> CVFrontPageGroupItems => Set<CVFrontPageGroupItem>();
+    public DbSet<PdfDownload> PdfDownloads => Set<PdfDownload>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, useLayoutEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useLayoutEffect, useState } from 'react'
 import type { ResolvedCv } from '../cv-builder/cvBuilderApi'
 import { DEFAULT_THEME, type CvTheme } from './cvThemes'
 
@@ -7,6 +7,7 @@ const A4_H = 1123
 const SIDEBAR_W = 232
 const HEADER_H = 110
 const PAGE_TOP_MARGIN = 36
+const FOOTER_H = 32
 
 interface Props { cv: ResolvedCv; showBoundary?: boolean; theme?: CvTheme }
 
@@ -233,7 +234,11 @@ function ContentPagesBody({ cv, breakOffsets }: { cv: ResolvedCv; breakOffsets?:
           <SectionDivider label={highlighted.length > 0 ? 'Other Assignments' : 'Projects and Assignments'} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             {regular.map(a => (
-              <div key={a.id}>
+              <div
+                key={a.id}
+                data-cv-break-avoid={`assignment-${a.id}`}
+                style={{ breakInside: 'avoid', pageBreakInside: 'avoid', ...offset(`assignment-${a.id}`) }}
+              >
                 <h3
                   className={a.title.fallbackUsed ? 'bg-yellow-100' : ''}
                   style={{ fontSize: 13, fontWeight: 700, color: t.accent, margin: 0, fontFamily: t.displayFont }}
@@ -280,7 +285,10 @@ function ContentPagesBody({ cv, breakOffsets }: { cv: ResolvedCv; breakOffsets?:
 
       {/* Skills — shown in content body only when sidebar has front page groups */}
       {hasGroups && cv.skills.length > 0 && (
-        <section>
+        <section
+          data-cv-break-avoid="skills"
+          style={{ breakInside: 'avoid', pageBreakInside: 'avoid', ...offset('skills') }}
+        >
           <SectionDivider label="Skills" />
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {cv.skills.map(s => (
@@ -419,40 +427,87 @@ export function CVPreview({ cv, showBoundary = false, theme }: Props) {
   const measureRef = useRef<HTMLDivElement>(null)
   const [totalHeight, setTotalHeight] = useState(A4_H)
   const [breakOffsets, setBreakOffsets] = useState<Record<string, number>>({})
+  // Tracks whether web fonts have finished loading. Until they have, any layout
+  // measurement is based on fallback-font metrics, so the page-break offsets it
+  // produces will be wrong as soon as the real fonts apply. We must not signal
+  // `data-cv-ready` (which gates Puppeteer's PDF capture) until fonts are in.
+  const fontsLoadedRef = useRef(false)
+
+  useEffect(() => {
+    if (typeof document === 'undefined' || !('fonts' in document)) {
+      fontsLoadedRef.current = true
+      return
+    }
+    let cancelled = false
+    document.fonts.ready.then(() => {
+      if (cancelled) return
+      fontsLoadedRef.current = true
+      // Force a re-render to re-run the layout effect with post-font metrics.
+      // ResizeObserver may have missed the reflow in PDF mode because the outer
+      // container has minHeight = pdfPageCount * A4_H, which masks content-only
+      // size changes.
+      setBreakOffsets(b => ({ ...b }))
+    })
+    return () => { cancelled = true }
+  }, [])
 
   useLayoutEffect(() => {
     const el = measureRef.current
     if (!el) return
     const measure = () => {
-      // Only the builder preview needs JS-driven page-break-avoid (Puppeteer handles CSS itself).
-      if (showBoundary) {
-        const wrapperTop = el.getBoundingClientRect().top
-        const next: Record<string, number> = {}
-        el.querySelectorAll<HTMLElement>('[data-cv-break-avoid]').forEach(s => {
-          const key = s.dataset.cvBreakAvoid
-          if (!key) return
-          const rect = s.getBoundingClientRect()
-          const top = rect.top - wrapperTop // includes any offset already applied
-          const height = rect.height
-          const existing = breakOffsets[key] ?? 0
-          if (height >= A4_H - PAGE_TOP_MARGIN) return // wouldn't fit on a page with top margin; leave it
-          const startPage = Math.floor(top / A4_H)
-          const endPage = Math.floor((top + height - 1) / A4_H)
-          if (startPage !== endPage) {
-            const desiredTop = (startPage + 1) * A4_H + PAGE_TOP_MARGIN
-            next[key] = existing + (desiredTop - top)
-          } else if (existing) {
-            next[key] = existing
-          }
-        })
-        const prevKeys = Object.keys(breakOffsets)
-        const nextKeys = Object.keys(next)
-        const same =
-          prevKeys.length === nextKeys.length &&
-          nextKeys.every(k => Math.abs((breakOffsets[k] ?? 0) - next[k]) < 0.5)
-        if (!same) setBreakOffsets(next)
+      // Page-break offsets are needed in both modes: the builder preview uses them to draw the
+      // top margin on page 2+, and the PDF render relies on them to put the same gap into Chrome's
+      // print output (CSS `break-inside: avoid` only avoids splitting — it does not add a top margin).
+      const wrapperTop = el.getBoundingClientRect().top
+      const next: Record<string, number> = {}
+      // Track the bottom of the last meaningful content section so pageCount reflects
+      // real content, not trailing padding. Using el.scrollHeight here would include
+      // ContentPagesBody's padding-bottom and push pageCount up by one whenever the
+      // padding pokes past a page boundary — producing a phantom empty trailing page.
+      let lastBottom = A4_H
+      el.querySelectorAll<HTMLElement>('[data-cv-break-avoid]').forEach(s => {
+        const key = s.dataset.cvBreakAvoid
+        if (!key) return
+        const rect = s.getBoundingClientRect()
+        const top = rect.top - wrapperTop // includes any offset already applied
+        const height = rect.height
+        if (height > 0 && top + height > lastBottom) lastBottom = top + height
+        const existing = breakOffsets[key] ?? 0
+        if (height <= 0) return // jsdom and pre-layout renders report zero rects — skip
+        if (height >= A4_H - PAGE_TOP_MARGIN - FOOTER_H) return // wouldn't fit even on a fresh page; leave it
+        const startPage = Math.floor(top / A4_H)
+        // The usable content zone for a given page is
+        //   [pageTop + PAGE_TOP_MARGIN, pageBottom - FOOTER_H]
+        // The top strip enforces breathing room below the previous page's footer (only on
+        // pages 2+ — page 1 starts at the cream header). The bottom strip keeps content
+        // out from under this page's footer overlay.
+        const safeTopOfPage = startPage * A4_H + PAGE_TOP_MARGIN
+        const pageContentBottom = (startPage + 1) * A4_H - FOOTER_H
+        if (top + height > pageContentBottom) {
+          // extends into footer zone — push to top of next page (with margin)
+          const desiredTop = (startPage + 1) * A4_H + PAGE_TOP_MARGIN
+          next[key] = existing + (desiredTop - top)
+        } else if (startPage > 0 && top < safeTopOfPage) {
+          // lands too close to the top of page 2+ (often because Chrome's own
+          // break-inside:avoid pushed it to y=0 of the new page) — add breathing room
+          next[key] = existing + (safeTopOfPage - top)
+        } else if (existing) {
+          next[key] = existing
+        }
+      })
+      const prevKeys = Object.keys(breakOffsets)
+      const nextKeys = Object.keys(next)
+      const same =
+        prevKeys.length === nextKeys.length &&
+        nextKeys.every(k => Math.abs((breakOffsets[k] ?? 0) - next[k]) < 0.5)
+      if (!same) {
+        setBreakOffsets(next)
+      } else if (fontsLoadedRef.current && typeof document !== 'undefined') {
+        // Signal to Puppeteer that layout has settled AND fonts are applied —
+        // only then is it safe to capture the PDF.
+        document.body.dataset.cvReady = '1'
       }
-      setTotalHeight(Math.max(el.scrollHeight, A4_H))
+      setTotalHeight(Math.max(lastBottom, A4_H))
     }
     measure()
     const ro = new ResizeObserver(measure)
@@ -460,13 +515,89 @@ export function CVPreview({ cv, showBoundary = false, theme }: Props) {
     return () => ro.disconnect()
   }, [cv, breakOffsets, showBoundary])
 
-  // ── PDF / Puppeteer mode — single continuous render ──
+  // ── PDF / Puppeteer mode — explicit per-page clip windows ──
+  //
+  // We use the same approach as the builder preview (which the user has confirmed renders
+  // correctly): the FULL continuous CvContent is rendered into a hidden measurement div,
+  // and N visible A4-sized `overflow: hidden` clip windows show its slices, with
+  // `pageBreakAfter: 'always'` separating them. Chrome's print engine therefore has zero
+  // pagination decisions left to make — each clip window is exactly one printed page.
+  //
+  // This is the only architecture that has worked. Previous attempts that let Chrome
+  // paginate a continuous flow consistently disagreed with the JS-measured boundaries no
+  // matter how we adjusted MarginOptions, viewport, media emulation, or @page CSS.
   if (!showBoundary) {
+    const pdfPageCount = Math.max(1, Math.ceil(totalHeight / A4_H))
     return (
       <ThemeCtx.Provider value={resolvedTheme}>
-        <div ref={measureRef} style={{ width: A4_W, minHeight: A4_H, fontFamily: resolvedTheme.bodyFont }}>
-          <CvContent cv={cv} />
+        {/* Hidden measurement render — drives breakOffsets / totalHeight via the
+            useLayoutEffect above. Sits off-screen so it never paints into the PDF. */}
+        <div
+          ref={measureRef}
+          aria-hidden
+          style={{
+            position: 'fixed',
+            top: -9999,
+            left: -9999,
+            width: A4_W,
+            opacity: 0,
+            pointerEvents: 'none',
+            fontFamily: resolvedTheme.bodyFont,
+          }}
+        >
+          <CvContent cv={cv} breakOffsets={breakOffsets} />
         </div>
+
+        {/* Visible per-page renders. Each one is an A4-sized clipped window onto the
+            same continuous CvContent, translated by -pageIdx * A4_H. We use a CSS
+            transform (translateY) instead of position:absolute + top:negative, because
+            Chrome's print engine reliably honours transforms but has been observed to
+            drop absolute-positioned content with large negative tops from print output. */}
+        {Array.from({ length: pdfPageCount }, (_, pageIdx) => (
+          <div
+            key={pageIdx}
+            style={{
+              width: A4_W,
+              height: A4_H,
+              position: 'relative',
+              overflow: 'hidden',
+              breakAfter: pageIdx < pdfPageCount - 1 ? 'page' : undefined,
+              pageBreakAfter: pageIdx < pdfPageCount - 1 ? 'always' : undefined,
+              fontFamily: resolvedTheme.bodyFont,
+              background: 'white',
+            }}
+          >
+            <div
+              style={{
+                width: A4_W,
+                transform: `translateY(${-pageIdx * A4_H}px)`,
+              }}
+            >
+              <CvContent cv={cv} breakOffsets={breakOffsets} />
+            </div>
+
+            {/* Per-page footer */}
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: pageIdx === 0 ? SIDEBAR_W : 0,
+                right: 0,
+                height: FOOTER_H,
+                padding: '10px 28px',
+                borderTop: '1px solid rgba(0,0,0,0.06)',
+                background: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                boxSizing: 'border-box',
+              }}
+            >
+              <span style={{ fontSize: 9, color: resolvedTheme.footerColor }}>{pageIdx + 1} / {pdfPageCount}</span>
+              <span style={{ fontSize: 9, color: resolvedTheme.footerNameColor, fontFamily: resolvedTheme.displayFont }}>{cv.firstName} {cv.lastName}</span>
+            </div>
+          </div>
+        ))}
       </ThemeCtx.Provider>
     )
   }

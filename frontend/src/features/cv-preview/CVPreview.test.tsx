@@ -10,15 +10,28 @@ const baseCv: ResolvedCv = {
   language: 'EN', yearsOfExperience: null,
 }
 
+// PDF mode now renders content multiple times (one hidden measurement copy + N visible
+// clip-window copies), so single-element queries like getByText would fail. Helpers
+// below tolerate any number of matches ≥ 1.
+function expectPresent(text: string | RegExp) {
+  expect(screen.getAllByText(text).length).toBeGreaterThan(0)
+}
+function expectHeading(name: string, level?: number) {
+  expect(screen.getAllByRole('heading', level === undefined ? { name } : { name, level }).length).toBeGreaterThan(0)
+}
+function firstWithText(text: string | RegExp) {
+  return screen.getAllByText(text)[0]
+}
+
 describe('CVPreview', () => {
   it('renders name', () => {
     render(<CVPreview cv={baseCv} />)
-    expect(screen.getByRole('heading', { name: 'Jane Doe' })).toBeInTheDocument()
+    expectHeading('Jane Doe')
   })
 
   it('renders introduction', () => {
     render(<CVPreview cv={baseCv} />)
-    expect(screen.getByText('Experienced developer')).toBeInTheDocument()
+    expectPresent('Experienced developer')
   })
 
   it('renders skills', () => {
@@ -27,7 +40,7 @@ describe('CVPreview', () => {
       skills: [{ id: '1', name: 'TypeScript', category: 'Frontend', displayOrder: 0 }],
     }
     render(<CVPreview cv={cv} />)
-    expect(screen.getByText('TypeScript')).toBeInTheDocument()
+    expectPresent('TypeScript')
   })
 
   it('renders regular assignment', () => {
@@ -41,8 +54,8 @@ describe('CVPreview', () => {
       }],
     }
     render(<CVPreview cv={cv} />)
-    expect(screen.getByRole('heading', { name: 'Backend Dev' })).toBeInTheDocument()
-    expect(screen.getByText('Acme')).toBeInTheDocument()
+    expectHeading('Backend Dev')
+    expectPresent('Acme')
   })
 
   it('renders highlighted assignments in highlighted projects section', () => {
@@ -56,8 +69,8 @@ describe('CVPreview', () => {
       }],
     }
     render(<CVPreview cv={cv} />)
-    expect(screen.getByText('Highlighted Projects')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Key Project', level: 3 })).toBeInTheDocument()
+    expectPresent('Highlighted Projects')
+    expectHeading('Key Project', 3)
   })
 
   it('renders education', () => {
@@ -69,7 +82,7 @@ describe('CVPreview', () => {
       }],
     }
     render(<CVPreview cv={cv} />)
-    expect(screen.getByText(/KTH/)).toBeInTheDocument()
+    expectPresent(/KTH/)
   })
 
   it('renders language', () => {
@@ -78,8 +91,8 @@ describe('CVPreview', () => {
       languages: [{ id: '1', name: 'Swedish', proficiency: 'Native', displayOrder: 0 }],
     }
     render(<CVPreview cv={cv} />)
-    expect(screen.getByText('Swedish')).toBeInTheDocument()
-    expect(screen.getByText('Native')).toBeInTheDocument()
+    expectPresent('Swedish')
+    expectPresent('Native')
   })
 
   it('renders front page groups below highlighted assignments', () => {
@@ -96,14 +109,14 @@ describe('CVPreview', () => {
       ],
     }
     render(<CVPreview cv={cv} />)
-    expect(screen.getByText('Cloud Skills')).toBeInTheDocument()
-    expect(screen.getByText('Azure')).toBeInTheDocument()
-    expect(screen.getByText('Kubernetes')).toBeInTheDocument()
+    expectPresent('Cloud Skills')
+    expectPresent('Azure')
+    expectPresent('Kubernetes')
   })
 
   it('renders no front page groups section when none present', () => {
     render(<CVPreview cv={baseCv} />)
-    expect(screen.queryByRole('list')).not.toBeInTheDocument()
+    expect(screen.queryAllByRole('list').length).toBe(0)
   })
 
   describe('Multi-page mode (Slice 11)', () => {
@@ -114,7 +127,7 @@ describe('CVPreview', () => {
 
     it('renders content in pdf mode (no showBoundary)', () => {
       render(<CVPreview cv={baseCv} />)
-      expect(screen.getByRole('heading', { name: 'Jane Doe' })).toBeInTheDocument()
+      expect(screen.getAllByText('Jane Doe').length).toBeGreaterThan(0)
     })
   })
 
@@ -126,7 +139,7 @@ describe('CVPreview', () => {
         isIntroductionOverridden: false,
       }
       render(<CVPreview cv={cv} />)
-      expect(screen.getByText('Swedish text').className).toContain('bg-yellow-100')
+      expect(firstWithText('Swedish text').className).toContain('bg-yellow-100')
     })
 
     it('does not highlight introduction when overridden', () => {
@@ -136,7 +149,7 @@ describe('CVPreview', () => {
         isIntroductionOverridden: true,
       }
       render(<CVPreview cv={cv} />)
-      expect(screen.getByText('Override').className).not.toContain('bg-yellow-100')
+      expect(firstWithText('Override').className).not.toContain('bg-yellow-100')
     })
 
     it('highlights fallback assignment title', () => {
@@ -150,12 +163,12 @@ describe('CVPreview', () => {
         }],
       }
       render(<CVPreview cv={cv} />)
-      expect(screen.getByRole('heading', { name: 'Swedish Title' }).className).toContain('bg-yellow-100')
+      expect(screen.getAllByRole('heading', { name: 'Swedish Title' })[0].className).toContain('bg-yellow-100')
     })
 
     it('does not highlight non-fallback introduction', () => {
       render(<CVPreview cv={baseCv} />)
-      expect(screen.getByText('Experienced developer').className).not.toContain('bg-yellow-100')
+      expect(firstWithText('Experienced developer').className).not.toContain('bg-yellow-100')
     })
   })
 })

@@ -22,7 +22,7 @@ setup('authenticate', async ({ page, request }) => {
   await page.getByRole('button', { name: 'Sign in' }).click()
 
   // Wait until we reach the CV list (logged in)
-  await expect(page).toHaveURL('/')
+  await expect(page).toHaveURL('/cvs')
 
   // Save state including localStorage (contains the JWT)
   await page.context().storageState({ path: authFile })
